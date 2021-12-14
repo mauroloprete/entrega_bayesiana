@@ -1,0 +1,1127 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{ulem}
+\usepackage{stackengine}
+\usepackage{appendix}
+\usepackage{caption}
+\usepackage[spanish]{babel}
+\usepackage[left=2.10cm,top=2.54cm,right=2.30cm,bottom=2.54cm]{geometry}
+\setlength{\parindent}{0pt}
+\usepackage[font=small,labelfont=bf]{caption}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage[table]{xcolor}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{multicol}
+\usepackage{amsmath}
+\spanishdecimal{.}
+\usepackage[backend=biber]{biblatex}
+\defbibfilter{other}{
+ not type=book
+}
+
+\addbibresource{biblio/bib.bib}
+\setlength{\parindent}{0pt}
+\usepackage[font=small,labelfont=bf]{caption}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\renewcommand{\listfigurename}{Lista de Figuras}
+\renewcommand{\contentsname}{Lista de Contenidos}
+\renewcommand{\figurename}{Figura}
+\definecolor{fgcolor}{rgb}{0.345, 0.345, 0.345}\definecolor{shadecolor}{rgb}{.97, .97, .97}
+\definecolor{messagecolor}{rgb}{0, 0, 0}
+\definecolor{warningcolor}{rgb}{1, 0, 1}
+\definecolor{errorcolor}{rgb}{1, 0, 0}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+\begin{titlepage}
+  \centering
+  {\scshape\normalsize Universidad de la República \par}
+  {\scshape\normalsize Facultad de Ciencias Economicas y de Administración \par}
+  {\scshape\normalsize Licenciatura en Estadística \par}
+  \vspace{1cm}
+  {\scshape\Large Inferencia II \par}
+  \vspace{0.5cm}
+
+  \includegraphics[scale = 0.20]{Lemur.jpg}
+  \vfill
+  {\scshape\Large Predicción de calidad de granos de café a partir de un modelo de regresión líneal múltiple Bayesiano \par}
+  \vfill
+  
+  \vspace{1cm}
+  {\Large Ignacio Acosta - Valentina Caldiroli - Mauro Loprete \par}
+  \vfill
+\end{titlepage}
+\setkeys{Gin}{width=0.8\textwidth}
+
+<<include = FALSE>>=
+
+if(!require(pacman)) {
+  install.packages("pacman")
+}
+
+pacman::p_load(
+  here,
+  magrittr,
+  tidytable,
+  knitr,
+  kableExtra,
+  stringr,
+  rstanarm,
+  data.table,
+  ggplot2,
+  magrittr,
+  viridis,
+  ggridges,
+  hrbrthemes,
+  rlang,
+  e1071,
+  fastDummies,
+  broom.mixed,
+  tidyselect,
+  bayesplot
+ )
+
+
+options(kableExtra.latex.load_packages = FALSE)
+
+ knitr::write_bib(
+   .packages(),
+   here(
+     "Documento",
+     "biblio",
+     "bib.bib"
+   )
+ )
+
+# Cargar los datos
+
+fread(
+  here(
+    "data",
+    "coffee.csv"
+  )
+) %>%
+select.(
+  V1,
+  country_of_origin,
+  company,
+  species,
+  number_of_bags,
+  in_country_partner,
+  grading_date,
+  owner_1,
+  variety,
+  processing_method,
+  aroma,
+  flavor,
+  aftertaste,
+  acidity,
+  body,
+  balance,
+  uniformity,
+  clean_cup,
+  sweetness,
+  cupper_points,
+  total_cup_points,
+  moisture,
+  color,
+  quakers,
+  expiration
+) %>%
+mutate.(
+    across.(
+        where(is.character),
+        ~ as.factor(.x)
+    )
+) %>%
+filter.(
+  total_cup_points > 0
+) %>%
+assign(
+    "data",
+    .,
+    envir = .GlobalEnv
+)
+
+# Para poder recuperar el script de los chunk
+
+knitr::purl(
+  here::here(
+    "Documento",
+    "Doc.Rnw"
+  )
+)
+
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+    library(grid)
+
+
+    plots <- c(list(...), plotlist)
+
+    numPlots = length(plots)
+
+
+    if (is.null(layout)) {
+
+        layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+        ncol = cols, nrow = ceiling(numPlots/cols))
+      }
+
+    if (numPlots==1) {
+        print(plots[[1]])
+
+      } else {
+        grid.newpage()
+        pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+        for (i in 1:numPlots) {
+            matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+            print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+              layout.pos.col = matchidx$col))
+          }
+      }
+  }
+
+@
+
+\newpage
+\section*{Introducción}
+
+
+Se realizará en este informe el estudio de una base de datos referida a la calidad de una serie de granos de café.
+\\
+
+La base surge de un informe del Coffee Quality Institute's de enero de 2018 en el cual se estudian las propiedades de 1340 granos de café de distintas partes del mundo (1312 granos del tipo \textit{Arábica} y 28 granos del tipo \textit{Robusta}). Aspectos tales como la dulzura, aroma, sabor, cuerpo, textura y balance son tomados en cuenta al momento de asignarles una calificación del 0 al 100.
+\\
+
+Donde 0 representa la peor de las calidades posibles y 100 un nivel excepcional.
+\\
+
+Herramientas clásicas de análisis descriptivo como lo son medidas de tendencia central, dispersión e incluso elementos gráficos serán utilizados en primera instancia para conocer de primera mano los datos.
+\\
+
+Finalmente, la inferencia bayesiana cobrará un rol fundamental.
+\\
+
+Se presentará un modelo de regresión líneal múltiple construido a partir de técnicas bayesianas. Se plantea una selección al azar de las diez variables que conforman el indice, al momento de explicar el rating del café (que se define de manera puramente determinística).
+\\
+
+Para finalizar el informe se analizará la convergencia de cadenas y simulará valores haciendo uso de la predictiva posterior para así contrastar el rendimiento del modelo frente a los datos reales.
+
+
+
+\newpage
+
+\subsection*{Análisis exploratorio de datos}
+
+El objetivo de esta sección es presentar las variables a estudiar y como las mismas se relacionan entre sí.
+\\
+
+Para ello se hará uso de distintas medidas de resumen univariadas y bivariadas, así como también un herramental gráfico variado que simplificará el entendimiento de las mismas.
+\\
+
+En la carga de los datos se quitó la observación que incluía un puntaje total de cero puntos, una vez aclarado esto, continuaremos con el análisis.
+\\
+
+Como primer acercamiento a las variables con las que se trabajará se presenta un cuadro con medidas de resumen para las variables de tipo cuantitativo:
+\\
+
+<<echo = FALSE>>=
+data %>%
+    summarise.(
+        across.(
+            c(
+                where(is.numeric),
+                - V1
+            ),
+            .fns = list(
+                Minimo = ~ round(
+                  min(
+                    .x,
+                    na.rm = TRUE
+                  ),
+                  2
+                ),
+                Media = ~ round(
+                  mean(
+                    .x,
+                    na.rm = TRUE
+                  ),
+                  2
+                ),
+                Mediana = ~ round(
+                  median(
+                    .x,
+                    na.rm = TRUE
+                  ),
+                  2
+                ),
+                Maximo = ~ round(
+                  max(
+                    .x,
+                    na.rm = TRUE
+                  ),
+                  2
+                ),
+                Faltantes = function(x) {
+                  round(
+                      (
+                      sum(is.na(x)) / nrow(.)
+                    ) * 100,
+                    2
+                  )
+                },
+                Outliers = function(x) {
+                  Q1 = quantile(x, probs = 0.25,na.rm = TRUE)
+                  Q3 = quantile(x,probs = 0.75,na.rm = TRUE)
+                  RI = Q3 - Q1
+                  n_ef = sum(!is.na(x))
+                  round(
+                      100*(
+                      sum(
+                        x < Q1 - 1.5*RI | x > Q3 + 1.5*RI,
+                        na.rm = TRUE
+                      )
+                    )/n_ef,
+                    2
+                  )
+                },
+                Asimetria = function(x) {
+                  
+                  if(skewness(x,na.rm = T) > 0) {
+                    "Positiva"
+                  } else if (skewness(x,na.rm = T) < 0) {
+                     "Negativa"
+                  } else {
+                     "Indeterminada"
+                  }
+
+                }
+            ),
+            .names = "{.fn}-{.col}"
+        )
+    ) %>%
+    pivot_longer.(
+        names_to = "statVar",
+        values_to = "statVal"
+    ) %>%
+    mutate.(
+        stat = str_split(
+            statVar,
+            "-",
+            simplify = TRUE
+        )[, 1],
+        Variable = str_split(
+            statVar,
+            "-",
+            simplify = TRUE
+        )[, 2],
+        .keep = "unused"
+    ) %>%
+    pivot_wider.(
+        names_from = "stat",
+        values_from = "statVal"
+    ) %>%
+    mutate.(
+      across.(
+        .cols = -c(
+          Variable,
+          Asimetria
+        ),
+        format,
+        digits = 2,
+        nsmall = 0
+      )
+    ) %>%
+    relocate.(
+      Minimo,
+      Media,
+      Mediana,
+      Maximo,
+      Faltantes,
+      Outliers,
+      Asimetria,
+      .after = Variable
+    ) %>%
+    set_names(
+      c(
+        "Variable",
+        "Min",
+        "Media",
+        "Mediana",
+        "Máx",
+        "Faltantes %",
+        "Outliers %",
+        "Asimetría"
+      )
+    ) %>%
+    kbl(
+        booktabs = T,
+        caption = "Estadísticas descriptivas para variables númericas"
+    ) %>%
+    kable_styling(
+        latex_options = c(
+          "striped",
+          "hold_position"
+        )
+    )
+@
+
+Con base en esta tabla puede verse poca presencia de datos faltantes en variables númericas, 
+una preponderancia de distribuciones con asimetría negativa y una incidencia de valores extremos bastante
+considerable. 
+\\
+
+La tasa de Outliers refiere a la cantidad de observaciones que superan la regla de Outliers leves \footnote{
+  $x > Q3 + 1.5*RI$ ó $x < Q1 - 1.5 * RI$, siendo $Q3$,$Q1$ el tercer y primer cuartil y $RI$ el recorrido intercuartílico.
+} sobre los valores no nulos de la misma variable, que dada la baja presencia de valores faltantes se aproxima al tamaño de la muestra.
+\\
+
+Nuestra variable de respuesta \textit{totalcuppoints} tiene una tasa de outliers moderada y una asimetría negativa, a continuación veremos
+su distribución, considerando las diferentes subpoblaciones generadas por el tipo de grano (Arábica y Robusta).
+\\
+
+<<echo = FALSE,warning = FALSE,message=FALSE,fig.cap = "Distribución de totalcup por especie",out.width="65%",fig.align='center'>>=
+
+data %>%
+    ggplot(
+        aes(
+            x = total_cup_points,
+            y = species,
+            fill = species
+        )
+    ) + 
+    geom_density_ridges2() +
+    theme_ipsum() + 
+    labs(
+        x = "total cup points",
+        y = "",
+        fill = "Especie"
+    ) + 
+    scale_fill_viridis(
+        discrete = TRUE
+    ) +
+    scale_color_viridis(
+        discrete = TRUE
+    ) +
+    theme_ridges(
+        grid = FALSE
+    )
+
+
+@
+ 
+Se plantea en un principio estudiar la distribución de los puntajes según la especie del grano de café.
+\\
+
+Puede verse como la distribución según especies son muy parecidas, ambas presentan una asimetría negativa.
+\\
+
+El puntaje mínimo para la especie Robusta es de 72 , mientras que en la otra especie 67. 
+\\
+
+Ambas especies tienen un valor modal, a pesar de ello el mismo no coincide. El de la especie Arabica es ligeramente mayor.
+\\
+
+Ningún grano de café independientemente de la especie alcanza un puntaje perfecto, muy pocos ejemplares de la especie Arabica logran apenas los 90 puntos.
+
+\newpage
+\section*{Planteamiento del modelo}
+
+Considerando el dataset mencionado anteriormente, se construyó un modelo de regresión líneal múltiple bayesiano.
+\\
+
+Para la decidir que variables conformarían el modelo, primero se seleccionó variables numéricas
+y 3 de las categóricas: species, processingmethod y color. 
+\\
+
+Luego se aplicó el método \textit{stepwise} en el modelo lineal constituido por todas las variables seleccionadas en primera instancia.
+\\
+
+El mismo estableció que las variables que más aportan a explicar la calificación del grano de café fueron:
+
+\begin{multicols}{3}
+  \begin{itemize}
+    \item {aroma}
+    \item {flavor}
+    \item {aftertaste}
+    \item {acidity}
+    \item {body}
+    \item {balance}
+    \item {uniformity}
+    \item {cleancup}
+    \item {sweetness}
+    \item {cupperpoints}
+  \end{itemize}
+\end{multicols}
+
+<<echo=FALSE,warning=FALSE,message=FALSE>>=
+
+data %>%
+dummy_columns(
+  select_columns = c(
+      "species",
+      "processing_method",
+      "color"
+    ),
+  remove_first_dummy = TRUE,
+  ignore_na = TRUE,
+  remove_selected_columns = TRUE
+) %>%
+mutate.(
+  across.(
+    .cols = c(
+      starts_with("species_"),
+      starts_with("processing_method_"),
+      starts_with("color_")
+    ),
+    ~ replace_na.(.x,0)
+  )
+) %>%
+set_names(
+  stringr::str_trim(
+    names(.),
+    side = "both"
+  )
+) %>%
+rename_with.(
+  ~ tolower(
+    gsub(
+      "-",
+      "_",
+      gsub(
+        " ",
+        "_",
+        gsub(" / ","_",.x)
+      )
+    )
+  )
+) %>%
+mutate.(
+  quakers = replace_na.(
+    quakers,
+    0
+  )
+) %>%
+select.(
+  -c(
+    starts_with("altitude")
+  )
+) %>%
+  assign(
+    "data_modelo",
+    .,
+    envir = .GlobalEnv
+  )
+
+
+lm(
+  total_cup_points ~ species_robusta + 
+    processing_method_other +
+    processing_method_pulped_natural_honey + 
+    processing_method_semi_washed_semi_pulped +
+    processing_method_washed_wet +
+    color_bluish_green + 
+    color_green + 
+    color_none +
+    species_robusta + 
+    number_of_bags + 
+    aroma + 
+    flavor + 
+    aftertaste + 
+    acidity + 
+    body + 
+    balance + 
+    uniformity + 
+    clean_cup + 
+    sweetness + 
+    cupper_points + 
+    moisture + 
+    quakers + 
+    country_of_origin,
+    data = na.omit(data_modelo)
+) %>%
+step(
+  direction = "both",
+  trace = FALSE
+) %>%
+assign(
+  "modelo",
+  .,
+  envir = .GlobalEnv
+)
+@
+
+Para la construcción del modelo definieron las distribuciones a priori por defecto, se simularon 4 cadenas dependientes con 8000 iteraciones cada una, 
+de las cuales se descartaron la mitad de ellas. 
+\\
+
+Para la validación del modelo, se visualizaron las cadenas para corroborar convergencia,además de verificar indicadores como el $Rhat$ y el $neff$ para prevenir problemas de no convergencia.
+\\
+
+El $Rhat$ de todos los regresores dió 1, y el $neff$ también arrojó valores altos indicando que no habría indicios de no convergencia. 
+
+<<include = FALSE>>=
+
+# Modelo1 <- stan_glm(
+#  formula(modelo),
+#  data = data_modelo,
+#  chains = 4,
+#  family = gaussian(),
+#  iter = 8000,
+#  seed = 100
+# )
+
+# save(
+#  Modelo1,
+#  file = here::here(
+#    "output",
+#    "Modelo1.Rdata"
+#  )
+# )
+
+load(
+  here::here(
+    "output",
+    "Modelo1.RData"
+  )
+)
+
+
+@
+
+
+
+Para poder realizar el diagnóstico del modelo, se analizaron dos estadísticos: \textit{mediana, media} y \textit{desvío estándar}. 
+\\
+
+<<echo=FALSE,out.width="40%",warning=FALSE,message=FALSE,fig.align='center',fig.cap="Histograma medianas simuladas vs valor real",fig.pos="h">>=
+
+color_scheme_set(scheme = "purple")
+
+pp_check(
+  Modelo1,
+  plotfun = "stat",
+  stat = "median"
+)
+@
+
+<<echo=FALSE,out.width="50%",warning=FALSE,message=FALSE,fig.align='center',fig.cap="Histograma SD simuladas vs valor real",fig.pos="h">>=
+pp_check(
+  Modelo1,
+  plotfun = "stat",
+  stat = "sd"
+)
+
+
+@
+La media, al ser un estadístico suficiente tuvo un ajuste correcto.
+El ajuste para el desvió estándar fue bueno, 
+aunque para la mediana observada fue menor que el promedio de las simulaciones. 
+
+
+\newpage
+
+Una vez vistas las estimaciones del modelo de regresión percatamos un problema con la selección del modelo, el puntaje total de cada copa era simplemente la suma de los diferentes
+puntajes en cada una de las áreas, en concreto las siguientes : 
+
+
+\begin{multicols}{4}
+  \begin{itemize}
+    \item {Aroma}
+    \item {Flavor}
+    \item {Afertaste}
+    \item {Acidity}
+    \item {Body}
+    \item {Balance}
+    \item {Uniformity}
+    \item {Sweetness}
+    \item {Clean cup}
+    \item {Cupper points}
+  \end{itemize}
+\end{multicols}
+
+En el caso de incluir todas las variables, sería una relación lineal del tipo determinístico y por tanto no tendría sentido aplicar teoría de regresión.
+\\
+
+De todas maneras, lo que hicimos fue que de las diez variables mencionadas anteriormente, se seleccionaron como máximo cuatro de ellas asumiendo
+que las restantes no se han podido relevar o que se perdió esta información. Una vez hecho esto, se puede representar el enfoque estocástico del error.
+\\
+
+
+Para esto, seleccionamos las variables para construir el índice, creamos diferentes modelos de regresión lineal
+con la condición que solo pudieran contener 4 de las variables.
+\\
+
+Una vez seleccionadas las variables, se planteo un modelo de regresión donde se incluían el tipo de especie y color del grano, el método de procesamiento,
+el grado de humedad y la cantidad de granos defectuosos que no se tostaron , los quakers.
+
+\subsection*{Modelo Reducido}
+Se generaron en total 211 modelos, a cada uno de ellos se les aplico el método de Stepwise y seleccionamos uno de manera aleatoria.
+
+A continuación se presentan los resultados de las estimaciones para este modelo partícular:
+\\
+
+<<eval = FALSE,echo = FALSE,out.width = "65%",fig.pos='h',fig.align="center">>=
+
+c(
+  "aroma",
+  "flavor",
+  "aftertaste",
+  "acidity",
+  "body",
+  "balance",
+  "uniformity",
+  "sweetness",
+  "clean_cup",
+  "cupper_points"
+) %>%
+combn(4) %>%
+dplyr::tibble() %>%
+   summarize.(
+     across.(
+       .cols = everything(),
+       ~ str_c(
+         .x,
+         collapse = "+"
+       )
+     )
+   ) %>%
+   pivot_longer.(
+     names_to = "rep",
+     values_to = "value"
+   ) %>% 
+   pull.(
+     "value"
+   ) %>%
+   map_dfr.(
+      .f = function(x) {
+        lm(
+          formula(
+            paste0(
+              "total_cup_points ~ 
+              species_robusta + 
+              processing_method_other +
+              processing_method_pulped_natural_honey + 
+              processing_method_semi_washed_semi_pulped +
+              processing_method_washed_wet +
+              color_bluish_green + 
+              color_green + 
+              color_none +
+              moisture + 
+              quakers + ",
+              x
+            )
+          ),
+          data = na.omit(data_modelo)
+        ) %>%
+        step(
+          direction = "both",
+          trace = FALSE
+        ) %>%
+        formula() %>%
+        assign(
+          "formula",
+          .,
+          envir = parent.env(
+            environment()
+          )
+        )
+
+        lm(
+          formula(formula),
+          data = na.omit(data_modelo)
+        ) %>%
+        broom::glance() %>%
+        mutate.(
+          formula = paste0(
+            deparse(formula, width.cutoff = 500)
+          )
+        )
+      }
+
+    ) %>%
+    fwrite.(
+      here(
+        "output",
+        "modelos.csv"
+      )
+    )
+
+
+@
+
+<<echo = FALSE,eval = FALSE,out.width="65%",fig.pos='h'>>=
+
+set.seed(1234)
+
+fread(
+  here(
+    "output",
+    "modelos.csv"
+  )
+) %>%
+slice_sample.(
+  n = 1
+) %>%
+assign(
+  "modelo",
+  .,
+  envir = .GlobalEnv
+)
+
+
+modelo %<>%
+ mutate.(
+   index = 1:n(),
+   formula = formula,
+   .keep = "none"
+ )
+
+
+stan_glm(
+    formula(modelo$formula),
+    data = data_modelo,
+    chains = 4,
+    family = gaussian(),
+    iter = 8000,
+    seed = 100
+  ) %>%
+  assign(
+    "Modelo_1",
+    .,
+    envir = .GlobalEnv
+  )
+
+  save(
+    Modelo_1,
+    file = here::here(
+      "output",
+      "Modelo_comb.Rdata"
+    )
+  )
+
+# Gráficos Mediana
+
+pp_check(
+      Modelo_1,
+      plotfun = "stat",
+      stat = "median"
+    ) %>%
+    assign(
+      "plot_modelo_1",
+      .,
+      envir = .GlobalEnv
+    )
+
+
+ggsave(
+  here::here(
+    "output",
+    "Mediana.png"
+  )
+)
+
+
+pp_check(
+      Modelo_1,
+      plotfun = "stat",
+      stat = "sd"
+    ) %>%
+    assign(
+      "plot_modelo_1_sd",
+      .,
+      envir = .GlobalEnv
+    )
+
+ggsave(
+    here::here(
+    "output",
+    "sd.png"
+  ),
+  plot = plot_modelo_1_sd
+)
+
+
+
+pp_check(
+      Modelo_1
+    ) %>%
+    assign(
+      "plotcheck_Modelo_1",
+      .,
+      envir = .GlobalEnv
+    )
+
+
+save(
+  plotcheck_Modelo_1,
+  file = here(
+    "output",
+    "plot_check.Rdata"
+  )
+)
+
+
+
+posterior_predict(
+      Modelo_1,
+      draws = 1000
+    ) %>%
+    assign(
+      "yrep_Modelo_1",
+      .,
+      envir = .GlobalEnv
+    )
+
+    ppc_scatter_avg(
+      data_modelo$total_cup_points, 
+      yrep_Modelo_1,
+      size = 2.5,
+      alpha = 0.8
+    ) %>%
+    assign(
+      "plot_yrep_Modelo_1",
+      .,
+      envir = .GlobalEnv
+    )
+
+
+save(
+  plot_yrep_Modelo_1,
+  file = here(
+    "output",
+    "yrep.Rdata"
+  )
+)
+
+@
+
+<<echo = FALSE>>=
+
+
+load(
+  here(
+    "output",
+    "Modelo_comb.Rdata"
+  ) 
+)
+
+
+
+Modelo_1 %>%
+  summary() %>%
+  as.data.frame() %>%
+  mutate.(
+    Variable = row.names(.),
+    .before = everything()
+  ) %>%
+  mutate.(
+    across.(
+      .cols = where(is.numeric),
+      ~ round(.x,2)
+    )
+  ) %>%
+  select.(
+    -mcse,
+    -`50%`
+  ) %>%
+  set_names(
+    "Variable",
+    "Media MCMC",
+    "Desv.Std",
+    "Int.10%",
+    "Int.90%",
+    "n_eff",
+    "Rhat"
+  ) %>%
+  kbl(
+    booktabs = T, 
+    caption = "Estimación puntual y errores estandár, intervalos de confianza y indices de convergencia"
+  ) %>%
+  kable_styling(
+    latex_options = c("striped", "hold_position"),
+    font_size = 8.5
+  )
+@
+
+
+Con base en el cuadro mostrado anteriormente se puede ver que se incluyen 8 variables.
+\\
+
+A modo de ejemplo,
+se interpretará el coeficiente de tipo de especie. 
+
+Enfocándonos en el coeficiente de regresión de $species_robusta$, se espera que el puntaje sea menor en $2.71$ unidades respecto que al de tipo Arabica (considerando
+las demás variables constantes). 
+\\
+
+Interpretaciones análogas pueden verse con el tipo de procesamiento y el color del grano, análisis que no era considerado
+si tomábamos todas las variables que conformaban el indice.
+\\
+
+En lo que refiere a los indices de convergencia, podemos ver que el tamaño de muestra efectivo toma valores elevados, 
+mientras que el $R_hat$ es exactamente 1 para cada parámetro a estimar.
+\\
+
+
+Se presenta a modo de referencia gráfica, las estimaciones de los parámetros del modelo y sus respectivos intervalos de credibilidad
+
+
+
+<<echo = FALSE, out.width = "50%", warning = FALSE,message = FALSE,fig.align = 'center', fig.cap = "Intervalos de credibilidad de paramétros",fig.pos="h">>=
+
+mcmc_intervals(Modelo_1 , prob_outer  = 0.95)
+
+
+@
+
+Se puede ver que el intervalo de credibilidad del 
+método de procesamiento de \textit{washed wet} contiene al cero, lo mismo ocurre
+con el color del grano, las demás podemos afirmar que no existe evidencia estadística
+para afirmar que sus coeficientes son cero.
+\\
+
+Nuevamente se revisará el ajuste con la mediana y el desvió estándar : 
+
+<<echo = FALSE, out.width = "50%", warning = FALSE,message = FALSE,fig.align = 'center', fig.cap = "Ajuste Mediana yrep vs observada",fig.pos="h">>=
+
+include_graphics(
+  here(
+    "output",
+    "Mediana.png"
+  )
+)
+
+
+@
+
+Haciendo uso del gráfico anterior, es claro como las medianas de las simulaciones se acercan al valor real del estadístico.
+\\
+
+Si bien la linea vertical a simple vista parece no estar en el centro del histograma,
+si se considera la escala podemos ver que la diferencia es de decimales.
+
+\newpage
+<<echo=FALSE,out.width="40%",warning=FALSE,message=FALSE,fig.align='center',fig.cap = "Ajuste desvio estándar yrep vs observada",fig.pos="h">>=
+
+color_scheme_set(scheme = "purple")
+
+
+include_graphics(
+  here(
+    "output",
+    "sd.png"
+  )
+)
+
+
+@
+
+El histograma de desviaciones estándar muestra como las simulaciones se ajustan muy bien a la realidad. 
+\\
+
+El intervalo modal contiene la SD real, a su vez toda la masa de probabilidad está contenida en valores muy cercanos.
+\\
+
+Finalmente se presenta el siguiente gráfico de dispersión:
+
+
+<<echo = FALSE,out.width="40%",fig.align='center',fig.pos="h">>=
+
+
+load(
+  here::here(
+    "output",
+    "yrep.RData"
+  )
+)
+
+plot_yrep_Modelo_1
+
+@
+
+El mismo representa la relación existente entre las observaciones y las predicciones realizadas con base en los valores de sus covariables y el modelo bayesiano construido.
+\\
+
+Puede verse como la mayor parte de las predicciones (las que se encuentran en la parte central) se ajustan muy bien, estas yacen sobre la recta identidad.
+\\
+
+Por otra parte, para los valores observados más extremos (grandes y chicos) el modelo estima con mayor grado de error.
+\\
+
+A nivel general, puede verse que el modelo refleja el comportamiento de la variable de interés. El nivel de los errores no es para nada exagerado.
+
+
+\newpage
+\section*{Conclusión}
+
+Estudiado el modelo, puede verse como el mismo se ajusta en gran medida a los datos.
+\\
+
+Si bien en el caso de la mediana las simulaciones no se ajustan con el mismo nivel de certeza que en la desviación estándar, es claro que en términos absolutos la diferencia tiende a ser muy pequeña (como máximo 3 unidades).
+\\
+
+A partir de ello puede afirmarse que en caso de no poseer todas las variables para estimar la puntuación total del grano de café, se puede obtener un estimativo medianamente preciso haciendo uso de este modelo bayesiano.
+\\
+
+Para futuros trabajos se podría buscar una manera no aleatoria de seleccionar el conjuntos de variables a utilizar, haciendo uso de herramientas bayesianas.
+\\
+
+Otro enfoque puede ser elegir el peor modelo en cuanto al BIC del conjunto de 211 modelos que se plantearon en una de las instancias intermedias.
+\\
+
+Sería también interesante estudiar el ajuste de distintos modelos bayesianos generalizados.
+
+\newpage
+\section*{Anexo}
+
+\subsection*{Metadata}
+
+<<echo = F>>=
+tidytable(
+  Variable = names(data),
+  Tipo = map_chr.(data,class)
+) %>%
+mutate.(
+  Tipo = case_when.(
+    Tipo == "integer" ~ "Númerica",
+    Tipo == "numeric" ~ "Númerica",
+    Tipo == "factor" ~ "Categoríca"
+  )
+) %>%
+kbl(
+    booktabs = T, 
+    caption = "Metadata"
+) %>%
+kable_styling(
+  latex_options = c("striped", "hold_position"),
+  font_size = 8.5
+)
+
+@
+
+
+
+\section*{Referencias}
+\nocite{*}
+\printbibliography[title={Libros consultados},type=book]
+\printbibliography[title={Paquetes de R},filter=other]
+
+\end{document}

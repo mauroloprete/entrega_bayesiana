@@ -1,0 +1,777 @@
+---
+title : Explicación de Indice de granos de café a partir de un modelo de regresión lineal bayesiano
+subtitle : Inferencia II
+author : Ignacio Acosta, Valentina Caldiroli , Mauro Loprete
+date : 26 de Noviembre
+output :
+  xaringan::moon_reader:
+   css : ["xaringan-themer.css","sydney.css"]
+   lib_dir : libs
+   includes:
+    after_body: insert-logo.html
+   nature :
+     ratio : "16:9"
+     highlightStyle: github
+     slideNumberFormat: '%current%'
+     highlightLines: true
+     countIncrementalSlides: false
+---
+
+```{r setup, include=F , warning = F }
+
+options(htmltools.dir.version = FALSE)
+if(!require(pacman)) {install.packages("pacman")}
+pacman::p_load(
+    xaringanthemer,
+    here,
+    tidytable,
+    knitr,
+    kableExtra,
+    stringr,
+    rstanarm,
+    data.table,
+    ggplot2,
+    magrittr,
+    ggcorrplot,
+    bayesplot,
+    viridis,
+    hrbrthemes,
+    ggridges,
+    rlang,
+    e1071,
+    fastDummies,
+    tidyselect
+)
+
+# Configuración del tema Xaringan:
+
+style_duo_accent(
+   primary_color = "#A200FF",
+   secondary_color = "#F3029B",
+   header_font_google = google_font("Titillium Web", "600"),
+   text_font_google   = google_font("Crimson Pro", "300", "300i"),
+   code_font_google   = google_font("IBM Plex Mono"),
+   base_font_size = "22px",
+   text_font_size = "1rem",
+   footnote_font_size = "0.6em",
+   header_h1_font_size = "2rem",
+   header_h2_font_size = "1.70rem",
+   header_h3_font_size = "1.5rem",
+)
+
+
+xaringanExtra::use_panelset()
+
+# Datos : 
+
+fread(
+  here(
+    "data",
+    "coffee.csv"
+  )
+) %>%
+select.(
+  V1,
+  country_of_origin,
+  company,
+  species,
+  number_of_bags,
+  in_country_partner,
+  grading_date,
+  owner_1,
+  variety,
+  processing_method,
+  aroma,
+  flavor,
+  aftertaste,
+  acidity,
+  body,
+  balance,
+  uniformity,
+  clean_cup,
+  sweetness,
+  cupper_points,
+  total_cup_points,
+  moisture,
+  color,
+  quakers,
+  expiration
+) %>%
+mutate.(
+    across.(
+        where(is.character),
+        ~ as.factor(.x)
+    )
+) %>%
+assign(
+    "data",
+    .,
+    envir = .GlobalEnv
+)
+
+
+load(
+  here::here(
+    "output",
+    "Modelo1.RData"
+  )
+)
+```
+
+class: header_background
+# Diagrama
+
+### - Análisis descriptivo
+### - Formulación del modelo
+### - Primeros resultados
+
+---
+class: inverse,middle
+# Análisis descriptivo
+---
+
+class: header_background 
+
+# Metadatos
+
+.scroll-box-20[
+
+```{r,echo = FALSE}
+tidytable(
+  Variable = names(data),
+  Tipo = map_chr.(data,class),
+  Descripcion = c(
+        "Indice",
+        "Ciudad de origen",
+        "Compañia",
+        "Especies de grano de café",
+        "Número de sacos cosechados",
+        "Filial del país",
+        "Fecha de calificación",
+        "Primer propietario",
+        "Variedad de grano",
+        "Método de procesamiento",
+        "Puntuación de aroma del revisor en una escala del 1 al 10",
+        "Puntuación de sabor del revisor en una escala del 1 al 10",
+        "Puntuación de regusto del revisor en una escala del 1 al 10",
+        "Puntuación de acidez del revisor en una escala del 1 al 10",
+        "Puntuación de cuerpo del revisor en una escala del 1 al 10",
+        "Puntuación de balance del revisor en una escala del 1 al 10",
+        "Puntuación de uniformidad del revisor en una escala del 1 al 10",
+        "Puntuación de transparencia de la taza del revisor en una escala del 1 al 10",
+        "Puntuación de dulzura de la taza del revisor en una escala del 1 al 10",
+        "Puntuación de ¿Comprensión? del revisor en una escala del 1 al 10",
+        "Suma del puntaje de revisores",
+        "Porcentaje de humedad de Green Analysis",
+        "-",
+        "Granos de café que no se vuelven marrón cuando se tuestan",
+        "Vencimiento"
+    )
+) %>%
+mutate.(
+  Tipo = case_when.(
+    Tipo == "integer" ~ "Númerica",
+    Tipo == "numeric" ~ "Númerica",
+    Tipo == "factor" ~ "Categoríca"
+  )
+) %>%
+kbl() %>% 
+kable_material(
+    c(
+        "striped",
+        "hover"
+    )
+) %>% 
+kable_styling(
+  font_size = 12
+)
+```
+]
+
+---
+
+class: header_background
+
+# Objetivo : 
+
+### Queremos explicar la puntuación por copa total con un modelo de regresión lineal desde un enfoque Bayesiano.
+
+#### Primero, analizaremos las variables incluidas en nuestra tabla de datos. 
+
+#### Luego una simple inspección, notamos que muchas de las varaibles categorícas no eran de importancia, fecha de vencimiento, compañia,etc.
+
+
+---
+
+class: header_background
+
+# Medidas univariadas
+
+
+.scroll-box-20[
+```{r,echo = FALSE} 
+
+data %>%
+    summarise.(
+        across.(
+            c(
+                where(is.numeric),
+                - V1
+            ),
+            .fns = list(
+                Minimo = ~ round(
+                  min(
+                    .x,
+                    na.rm = TRUE
+                  ),
+                  2
+                ),
+                Media = ~ round(
+                  mean(
+                    .x,
+                    na.rm = TRUE
+                  ),
+                  2
+                ),
+                Mediana = ~ round(
+                  median(
+                    .x,
+                    na.rm = TRUE
+                  ),
+                  2
+                ),
+                Maximo = ~ round(
+                  max(
+                    .x,
+                    na.rm = TRUE
+                  ),
+                  2
+                ),
+                Faltantes = function(x) {
+                  round(
+                      (
+                      sum(is.na(x)) / nrow(.)
+                    ) * 100,
+                    2
+                  )
+                },
+                Outliers = function(x) {
+                  Q1 = quantile(x, probs = 0.25,na.rm = TRUE)
+                  Q3 = quantile(x,probs = 0.75,na.rm = TRUE)
+                  RI = Q3 - Q1
+                  n_ef = sum(!is.na(x))
+                  round(
+                      100*(
+                      sum(
+                        x < Q1 - 1.5*RI | x > Q3 + 1.5*RI,
+                        na.rm = TRUE
+                      )
+                    )/n_ef,
+                    2
+                  )
+                },
+                Asimetria = function(x) {
+                  
+                  if(skewness(x,na.rm = T) > 0) {
+                    "Positiva"
+                  } else if (skewness(x,na.rm = T) < 0) {
+                     "Negativa"
+                  } else {
+                     "Indeterminada"
+                  }
+
+                }
+            ),
+            .names = "{.fn}-{.col}"
+        )
+    ) %>%
+    pivot_longer.(
+        names_to = "statVar",
+        values_to = "statVal"
+    ) %>%
+    mutate.(
+        stat = str_split(
+            statVar,
+            "-",
+            simplify = TRUE
+        )[, 1],
+        Variable = str_split(
+            statVar,
+            "-",
+            simplify = TRUE
+        )[, 2],
+        .keep = "unused"
+    ) %>%
+    pivot_wider.(
+        names_from = "stat",
+        values_from = "statVal"
+    ) %>%
+    mutate.(
+      across.(
+        .cols = -c(
+          Variable,
+          Asimetria
+        ),
+        format,
+        digits = 2,
+        nsmall = 0
+      )
+    ) %>%
+    relocate.(
+      Minimo,
+      Media,
+      Mediana,
+      Maximo,
+      Faltantes,
+      Outliers,
+      Asimetria,
+      .after = Variable
+    ) %>%
+    set_names(
+      c(
+        "Variable",
+        "Min",
+        "Media",
+        "Mediana",
+        "Máx",
+        "Faltantes %",
+        "Outliers %",
+        "Asimetría"
+      )
+    ) %>%
+    kbl() %>%
+    kable_material(
+        c(
+            "striped",
+            "hover"
+        )
+    ) %>% 
+    kable_styling(
+    font_size = 12
+    )
+```
+]
+
+---
+class: header_background
+
+# Visualizaciones 
+
+.panelset[
+.panel[.panel-name[Tipo de especie]
+.center[
+```{r,warning = F,message = F,echo = F,fig.pos = "H",out.width = "40%",dpi = 170,fig.retina = 2}
+data %>%
+    ggplot(
+        aes(
+            x = total_cup_points,
+            y = species,
+            fill = species
+        )
+    ) + 
+    geom_density_ridges2() +
+    theme_ipsum() + 
+    labs(
+        x = "total_cup_points",
+        y = "",
+        color = "species"
+    ) + 
+    scale_fill_viridis(
+        discrete = TRUE
+    ) +
+    scale_color_viridis(
+        discrete = TRUE
+    ) +
+    theme_ridges(
+        grid = FALSE
+    ) +
+    theme(
+        legend.position = "none"
+    )
+```
+]
+]
+.panel[.panel-name[Tipo de proceso]
+.center[
+```{r,warning = F,message = F,echo = F,fig.pos = "H",out.width = "40%",dpi = 170,fig.retina = 2}
+data %>%
+    ggplot(
+        aes(
+            x = total_cup_points,
+            y = processing_method,
+            fill = processing_method
+        )
+    ) + 
+    geom_density_ridges2() +
+    theme_ipsum() + 
+    labs(
+        x = "total_cup_points",
+        y = "",
+        color = "processing_method"
+    ) + 
+    scale_fill_viridis(
+        discrete = TRUE
+    ) +
+    scale_color_viridis(
+        discrete = TRUE
+    ) +
+    theme_ridges(
+        grid = FALSE
+    ) +
+    theme(
+        legend.position = "none"
+    )
+```
+]
+]
+.panel[.panel-name[Color]
+.center[
+```{r,warning = F,message = F,echo = F,fig.pos = "H",out.width = "40%",dpi = 170,fig.retina = 2}
+data %>%
+    ggplot(
+        aes(
+            x = total_cup_points,
+            y = color,
+            fill = color
+        )
+    ) + 
+    geom_density_ridges2() +
+    theme_ipsum() + 
+    labs(
+        x = "total_cup_points",
+        y = "",
+        color = "color"
+    ) + 
+    scale_fill_viridis(
+        discrete = TRUE
+    ) +
+    scale_color_viridis(
+        discrete = TRUE
+    ) +
+    theme_ridges(
+        grid = FALSE
+    ) +
+    theme(
+        legend.position = "none"
+    )
+```
+]
+]
+.panel[.panel-name[Mapa de correlación]
+.center[
+```{r,warning = F,message = F,echo = F,fig.pos = "H",out.width = "40%",dpi = 170,fig.retina = 2}
+data %>%
+    select.(
+        where(is.numeric),
+        -V1
+    ) %>%
+    cor(use = "complete.obs") %>%
+    ggcorrplot(
+        hc.order = TRUE,
+        type = "upper",
+        outline.col = "white",
+        method = "circle"
+    ) +
+    scale_fill_gradient2(
+        limits = c(-1, 1),
+        low = "#A50303",
+        high = "#250455"
+    )
+```
+]
+]
+]
+
+---
+
+class: inverse,middle
+# Creación del primer modelo
+
+---
+
+class: header_background
+
+# Selección de variables
+
+Una vez hecho el análisis descriptivo, definimos un modelo completo con todas las
+variables númericas, además de las variables categorícas como Especie, Método de procesamiento y color.
+
+Al modelo completo le aplicamos el método de selección a pasos *stepWise* en base al AIC.
+
+Las variables que fuerón incluidas en el modelo fuerón : 
+
+- aroma, flavor, aftertaste
+- acidity, body balance
+- clean cup sweetnes cupper points
+
+
+---
+
+class: header_background
+
+# Resumen del modelo
+
+
+.scroll-box-20[
+```{r,echo = FALSE}
+data %>%
+dummy_columns(
+  select_columns = c(
+      "species",
+      "processing_method",
+      "color"
+    ),
+  remove_first_dummy = TRUE,
+  ignore_na = TRUE,
+  remove_selected_columns = TRUE
+) %>%
+mutate.(
+  across.(
+    .cols = c(
+      starts_with("species_"),
+      starts_with("processing_method_"),
+      starts_with("color_")
+    ),
+    ~ replace_na.(.x,0)
+  )
+) %>%
+set_names(
+  stringr::str_trim(
+    names(.),
+    side = "both"
+  )
+) %>%
+rename_with.(
+  ~ tolower(
+    gsub(
+      "-",
+      "_",
+      gsub(
+        " ",
+        "_",
+        gsub(" / ","_",.x)
+      )
+    )
+  )
+) %>%
+mutate.(
+  quakers = replace_na.(
+    quakers,
+    0
+  )
+) %>%
+select.(
+  -c(
+    starts_with("altitude")
+  )
+) %>%
+  assign(
+    "data_modelo",
+    .,
+    envir = .GlobalEnv
+  )
+
+lm(
+  total_cup_points ~ species_robusta + 
+    processing_method_other +
+    processing_method_pulped_natural_honey + 
+    processing_method_semi_washed_semi_pulped +
+    processing_method_washed_wet +
+    color_bluish_green + 
+    color_green + 
+    color_none +
+    species_robusta + 
+    number_of_bags + 
+    aroma + 
+    flavor + 
+    aftertaste + 
+    acidity + 
+    body + 
+    balance + 
+    uniformity + 
+    clean_cup + 
+    sweetness + 
+    cupper_points + 
+    moisture + 
+    quakers + 
+    country_of_origin,
+    data = na.omit(data_modelo)
+) %>%
+step(
+  direction = "both",
+  trace = FALSE
+) %>%
+assign(
+  "modelo",
+  .,
+  envir = .GlobalEnv
+)
+library(broom)
+tidy(modelo) %>%
+kbl() %>%
+kable_material(
+    c(
+        "striped",
+        "hover"
+    )
+) %>% 
+kable_styling(
+    font_size = 12
+)
+```
+]
+
+---
+
+class: inverse,middle
+# Modelado Bayesiano
+
+---
+
+class: header_background
+
+# Creación del modelo y convergencia
+
+Además de probar con diferentes prioris para el intercepto y en base a la salida del modelo clasico,
+decidimos dejarlo como una normal estandar, utilizamos el algortimo sampling con 10000 iteraciones.
+
+.panelset[
+.panel[.panel-name[Creación del modelo]
+
+```{r,eval = FALSE}
+stan_glm(
+    formula(modelo),
+    data = data_modelo,
+    chains = 4,
+    family = gaussian(),
+    iter = 10000,
+    seed = 100
+)
+```
+```{r,echo = F}
+formula(modelo)
+```
+
+
+]
+.panel[.panel-name[Prioris]
+.scroll-box-16[
+```{r,echo = FALSE}
+prior_summary(Modelo1)
+```
+]
+]
+.panel[.panel-name[Convergencia]
+
+.scroll-box-16[
+
+```{r,echo = F}
+summary(Modelo1)
+```
+]
+]
+]
+
+---
+
+class: header_background
+
+# Primeros resultados
+
+.panelset[
+.center[
+.panel[.panel-name[Desidad posterior]
+.center[
+```{r,warning = F,message = F,echo = F,fig.pos = "H",out.width = "40%",dpi = 170,fig.retina = 2}
+pred <- posterior_predict(Modelo1,draws = 1000)
+
+ppc_dens_overlay(data$total_cup_points, pred)
+```
+]
+]
+]
+.panel[.panel-name[Estimaciones]
+
+
+.scroll-box-16[
+```{r,echo = F}
+broom.mixed::tidy(Modelo1,conf.int = TRUE) %>%
+mutate.(
+  across.(
+    where(is.numeric),
+    ~ round(.x,4)
+  )
+) %>%
+kbl() %>%
+kable_material(
+    c(
+        "striped",
+        "hover"
+    )
+) %>% 
+kable_styling(
+    font_size = 12
+)
+```
+]
+
+]
+
+.panel[.panel-name[Intervalos de credibilidad]
+
+.center[
+```{r,warning = F,message = F,echo = F,fig.pos = "H",out.width = "40%",dpi = 170,fig.retina = 2}
+mcmc_intervals(Modelo1 , prob_outer  = 0.95)
+```
+]
+]
+]
+
+
+---
+
+class: header_background
+
+# Validación
+
+.panelset[
+.panel[.panel-name[Mediana]
+.center[
+
+```{r,warning = F,message = F,echo = F,fig.pos = "H",out.width = "40%",dpi = 170,fig.retina = 2}
+color_scheme_set("purple")
+pp_check(
+  Modelo1,
+  plotfun = "stat",
+  stat = "median"
+)
+```
+
+]
+]
+
+.panel[.panel-name[Desvío]
+
+.center[
+```{r,warning = F,message = F,echo = F,fig.pos = "H",out.width = "40%",dpi = 170,fig.retina = 2}
+color_scheme_set("purple")
+pp_check(
+  Modelo1,
+  plotfun = "stat",
+  stat = "sd"
+)
+```
+
+]
+
+]
+]
+
+
+---
+class: header_background
+
+# Siguientes pasos 
+
+### - Ver que otros estadísticos nos pueden ayudar al diagnostico
+### - Ver relación lineal 'perfecta'

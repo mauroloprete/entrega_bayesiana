@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Explicación de Indice de granos de café a partir de un modelo de regresión lineal bayesiano</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Ignacio Acosta, Valentina Caldiroli , Mauro Loprete" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <link href="libs/panelset/panelset.css" rel="stylesheet" />
+    <script src="libs/panelset/panelset.js"></script>
+    <script src="libs/kePrint/kePrint.js"></script>
+    <link href="libs/lightable/lightable.css" rel="stylesheet" />
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+    <link rel="stylesheet" href="sydney.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# Explicación de Indice de granos de café a partir de un modelo de regresión lineal bayesiano
+## Inferencia II
+### Ignacio Acosta, Valentina Caldiroli , Mauro Loprete
+### 26 de Noviembre
+
+---
+
+
+
+
+class: header_background
+# Diagrama
+
+### - Análisis descriptivo
+### - Formulación del modelo
+### - Primeros resultados
+
+---
+class: inverse,middle
+# Análisis descriptivo
+---
+
+class: header_background 
+
+# Metadatos
+
+.scroll-box-20[
+
+&lt;table class=" lightable-material lightable-striped lightable-hover table" style='font-family: "Source Sans Pro", helvetica, sans-serif; margin-left: auto; margin-right: auto; font-size: 12px; margin-left: auto; margin-right: auto;'&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt; Variable &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; Tipo &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; Descripcion &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; V1 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Númerica &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Indice &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; country_of_origin &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Categoríca &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Ciudad de origen &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; company &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Categoríca &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Compañia &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; species &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Categoríca &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Especies de grano de café &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; number_of_bags &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Númerica &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Número de sacos cosechados &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; in_country_partner &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Categoríca &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Filial del país &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; grading_date &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Categoríca &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Fecha de calificación &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; owner_1 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Categoríca &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Primer propietario &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; variety &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Categoríca &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Variedad de grano &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; processing_method &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Categoríca &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Método de procesamiento &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; aroma &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Númerica &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Puntuación de aroma del revisor en una escala del 1 al 10 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; flavor &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Númerica &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Puntuación de sabor del revisor en una escala del 1 al 10 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; aftertaste &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Númerica &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Puntuación de regusto del revisor en una escala del 1 al 10 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; acidity &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Númerica &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Puntuación de acidez del revisor en una escala del 1 al 10 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; body &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Númerica &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Puntuación de cuerpo del revisor en una escala del 1 al 10 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; balance &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Númerica &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Puntuación de balance del revisor en una escala del 1 al 10 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; uniformity &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Númerica &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Puntuación de uniformidad del revisor en una escala del 1 al 10 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; clean_cup &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Númerica &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Puntuación de transparencia de la taza del revisor en una escala del 1 al 10 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; sweetness &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Númerica &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Puntuación de dulzura de la taza del revisor en una escala del 1 al 10 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; cupper_points &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Númerica &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Puntuación de ¿Comprensión? del revisor en una escala del 1 al 10 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; total_cup_points &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Númerica &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Suma del puntaje de revisores &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; moisture &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Númerica &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Porcentaje de humedad de Green Analysis &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; color &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Categoríca &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; - &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; quakers &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Númerica &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Granos de café que no se vuelven marrón cuando se tuestan &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; expiration &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Categoríca &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Vencimiento &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+]
+
+---
+
+class: header_background
+
+# Objetivo : 
+
+### Queremos explicar la puntuación por copa total con un modelo de regresión lineal desde un enfoque Bayesiano.
+
+#### Primero, analizaremos las variables incluidas en nuestra tabla de datos. 
+
+#### Luego una simple inspección, notamos que muchas de las varaibles categorícas no eran de importancia, fecha de vencimiento, compañia,etc.
+
+
+---
+
+class: header_background
+
+# Medidas univariadas
+
+
+.scroll-box-20[
+&lt;table class=" lightable-material lightable-striped lightable-hover table" style='font-family: "Source Sans Pro", helvetica, sans-serif; margin-left: auto; margin-right: auto; font-size: 12px; margin-left: auto; margin-right: auto;'&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt; Variable &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; Min &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; Media &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; Mediana &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; Máx &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; Faltantes % &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; Outliers % &lt;/th&gt;
+   &lt;th style="text-align:left;"&gt; Asimetría &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; acidity &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 7.54 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 7.58 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 8.75 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 1.87 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Negativa &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; aftertaste &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 7.4 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 7.42 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 8.67 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 6.5 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Negativa &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; aroma &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 7.57 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 7.58 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 8.75 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 5.38 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Negativa &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; balance &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 7.52 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 7.5 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 8.75 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 2.99 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Negativa &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; body &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 7.52 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 7.5 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 8.58 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 2.54 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Negativa &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; clean_cup &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 9.84 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 10 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 10 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 8.96 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Negativa &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; cupper_points &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 7.5 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 7.5 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 10 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 2.46 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Negativa &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; flavor &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 7.52 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 7.58 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 8.83 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 3.29 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Negativa &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; moisture &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0.09 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0.11 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0.28 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 22.78 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Negativa &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; number_of_bags &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 154.18 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 175 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 1062 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0.07 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Positiva &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; quakers &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0.17 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 11 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0.07 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 7.03 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Positiva &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; sweetness &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 9.86 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 10 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 10 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 9.04 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Negativa &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; total_cup_points &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 82.09 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 82.5 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 90.58 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 5.38 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Negativa &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; uniformity &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 9.83 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 10 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 10 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 0 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; 13.97 &lt;/td&gt;
+   &lt;td style="text-align:left;"&gt; Negativa &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+]
+
+---
+class: header_background
+
+# Visualizaciones 
+
+.panelset[
+.panel[.panel-name[Tipo de especie]
+.center[
+&lt;img src="presentacion_files/figure-html/unnamed-chunk-3-1.png" width="40%" /&gt;
+]
+]
+.panel[.panel-name[Tipo de proceso]
+.center[
+&lt;img src="presentacion_files/figure-html/unnamed-chunk-4-1.png" width="40%" /&gt;
+]
+]
+.panel[.panel-name[Color]
+.center[
+&lt;img src="presentacion_files/figure-html/unnamed-chunk-5-1.png" width="40%" /&gt;
+]
+]
+.panel[.panel-name[Mapa de correlación]
+.center[
+&lt;img src="presentacion_files/figure-html/unnamed-chunk-6-1.png" width="40%" /&gt;
+]
+]
+]
+
+---
+
+class: inverse,middle
+# Creación del primer modelo
+
+---
+
+class: header_background
+
+# Selección de variables
+
+Una vez hecho el análisis descriptivo, definimos un modelo completo con todas las
+variables númericas, además de las variables categorícas como Especie, Método de procesamiento y color.
+
+Al modelo completo le aplicamos el método de selección a pasos *stepWise* en base al AIC.
+
+Las variables que fuerón incluidas en el modelo fuerón : 
+
+- aroma, flavor, aftertaste
+- acidity, body balance
+- clean cup sweetnes cupper points
+
+
+---
+
+class: header_background
+
+# Resumen del modelo
+
+
+.scroll-box-20[
+&lt;table class=" lightable-material lightable-striped lightable-hover table" style='font-family: "Source Sans Pro", helvetica, sans-serif; margin-left: auto; margin-right: auto; font-size: 12px; margin-left: auto; margin-right: auto;'&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt; term &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; estimate &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; std.error &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; statistic &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; p.value &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; (Intercept) &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.0168682 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0137689 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -1.225091 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.2208326 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; aroma &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0006237 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0026694 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 374.853509 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0000000 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; flavor &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9989071 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0039183 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 254.931529 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0000000 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; aftertaste &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0049948 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0036101 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 278.380489 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0000000 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; acidity &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9967079 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0028391 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 351.068659 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0000000 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; body &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0012024 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0030268 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 330.778039 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0000000 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; balance &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0030352 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0028682 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 349.713189 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0000000 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; uniformity &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0038881 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0013297 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 754.970143 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0000000 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; clean_cup &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0004643 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0009745 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1026.616826 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0000000 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; sweetness &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9978468 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0013188 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 756.645234 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0000000 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; cupper_points &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9939817 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0025014 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 397.370899 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0000000 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+]
+
+---
+
+class: inverse,middle
+# Modelado Bayesiano
+
+---
+
+class: header_background
+
+# Creación del modelo y convergencia
+
+Además de probar con diferentes prioris para el intercepto y en base a la salida del modelo clasico,
+decidimos dejarlo como una normal estandar, utilizamos el algortimo sampling con 10000 iteraciones.
+
+.panelset[
+.panel[.panel-name[Creación del modelo]
+
+
+```r
+stan_glm(
+    formula(modelo),
+    data = data_modelo,
+    chains = 4,
+    family = gaussian(),
+    iter = 10000,
+    seed = 100
+)
+```
+
+```
+## total_cup_points ~ aroma + flavor + aftertaste + acidity + body + 
+##     balance + uniformity + clean_cup + sweetness + cupper_points
+```
+
+
+]
+.panel[.panel-name[Prioris]
+.scroll-box-16[
+
+```
+## Priors for model 'Modelo1' 
+## ------
+## Intercept (after predictors centered)
+##   Specified prior:
+##     ~ normal(location = 82, scale = 2.5)
+##   Adjusted prior:
+##     ~ normal(location = 82, scale = 8.8)
+## 
+## Coefficients
+##   Specified prior:
+##     ~ normal(location = [0,0,0,...], scale = [2.5,2.5,2.5,...])
+##   Adjusted prior:
+##     ~ normal(location = [0,0,0,...], scale = [23.18,21.96,21.64,...])
+## 
+## Auxiliary (sigma)
+##   Specified prior:
+##     ~ exponential(rate = 1)
+##   Adjusted prior:
+##     ~ exponential(rate = 0.29)
+## ------
+## See help('prior_summary.stanreg') for more details
+```
+]
+]
+.panel[.panel-name[Convergencia]
+
+.scroll-box-16[
+
+
+```
+## 
+## Model Info:
+##  function:     stan_glm
+##  family:       gaussian [identity]
+##  formula:      total_cup_points ~ aroma + flavor + aftertaste + acidity + body + 
+## 	   balance + uniformity + clean_cup + sweetness + cupper_points
+##  algorithm:    sampling
+##  sample:       16000 (posterior sample size)
+##  priors:       see help('prior_summary')
+##  observations: 1339
+##  predictors:   11
+## 
+## Estimates:
+##                 mean   sd   10%   50%   90%
+## (Intercept)   0.0    0.0  0.0   0.0   0.0  
+## aroma         1.0    0.0  1.0   1.0   1.0  
+## flavor        1.0    0.0  1.0   1.0   1.0  
+## aftertaste    1.0    0.0  1.0   1.0   1.0  
+## acidity       1.0    0.0  1.0   1.0   1.0  
+## body          1.0    0.0  1.0   1.0   1.0  
+## balance       1.0    0.0  1.0   1.0   1.0  
+## uniformity    1.0    0.0  1.0   1.0   1.0  
+## clean_cup     1.0    0.0  1.0   1.0   1.0  
+## sweetness     1.0    0.0  1.0   1.0   1.0  
+## cupper_points 1.0    0.0  1.0   1.0   1.0  
+## sigma         0.0    0.0  0.0   0.0   0.0  
+## 
+## Fit Diagnostics:
+##            mean   sd   10%   50%   90%
+## mean_PPD 82.1    0.0 82.1  82.1  82.1 
+## 
+## The mean_ppd is the sample average posterior predictive distribution of the outcome variable (for details see help('summary.stanreg')).
+## 
+## MCMC diagnostics
+##               mcse Rhat n_eff
+## (Intercept)   0.0  1.0  17448
+## aroma         0.0  1.0  19616
+## flavor        0.0  1.0  14192
+## aftertaste    0.0  1.0  14647
+## acidity       0.0  1.0  19837
+## body          0.0  1.0  19610
+## balance       0.0  1.0  19130
+## uniformity    0.0  1.0  22214
+## clean_cup     0.0  1.0  20936
+## sweetness     0.0  1.0  22188
+## cupper_points 0.0  1.0  18621
+## sigma         0.0  1.0   1417
+## mean_PPD      0.0  1.0   7422
+## log-posterior 0.0  1.0   4996
+## 
+## For each parameter, mcse is Monte Carlo standard error, n_eff is a crude measure of effective sample size, and Rhat is the potential scale reduction factor on split chains (at convergence Rhat=1).
+```
+]
+]
+]
+
+---
+
+class: header_background
+
+# Primeros resultados
+
+.panelset[
+.center[
+.panel[.panel-name[Desidad posterior]
+.center[
+&lt;img src="presentacion_files/figure-html/unnamed-chunk-12-1.png" width="40%" /&gt;
+]
+]
+]
+.panel[.panel-name[Estimaciones]
+
+
+.scroll-box-16[
+&lt;table class=" lightable-material lightable-striped lightable-hover table" style='font-family: "Source Sans Pro", helvetica, sans-serif; margin-left: auto; margin-right: auto; font-size: 12px; margin-left: auto; margin-right: auto;'&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt; term &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; estimate &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; std.error &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; conf.low &lt;/th&gt;
+   &lt;th style="text-align:right;"&gt; conf.high &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; (Intercept) &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.0140 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0113 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; -0.0323 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0043 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; aroma &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0001 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0021 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9966 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0034 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; flavor &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9992 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0030 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9944 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0040 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; aftertaste &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0025 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0028 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9979 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0070 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; acidity &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9977 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0021 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9943 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0012 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; body &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0006 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0020 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9974 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0040 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; balance &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0026 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0021 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9991 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0060 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; uniformity &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0025 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0010 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0009 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0042 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; clean_cup &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0004 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0007 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9992 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0016 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; sweetness &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9989 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0008 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9975 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 1.0003 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; cupper_points &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9968 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.0017 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9941 &lt;/td&gt;
+   &lt;td style="text-align:right;"&gt; 0.9995 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+]
+
+]
+
+.panel[.panel-name[Intervalos de credibilidad]
+
+.center[
+&lt;img src="presentacion_files/figure-html/unnamed-chunk-14-1.png" width="40%" /&gt;
+]
+]
+]
+
+
+---
+
+class: header_background
+
+# Validación
+
+.panelset[
+.panel[.panel-name[Mediana]
+.center[
+
+&lt;img src="presentacion_files/figure-html/unnamed-chunk-15-1.png" width="40%" /&gt;
+
+]
+]
+
+.panel[.panel-name[Desvío]
+
+.center[
+&lt;img src="presentacion_files/figure-html/unnamed-chunk-16-1.png" width="40%" /&gt;
+
+]
+
+]
+]
+
+
+---
+class: header_background
+
+# Siguientes pasos 
+
+### - Ver que otros estadísticos nos pueden ayudar al diagnostico
+### - Ver relación lineal 'perfecta'
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"ratio": "16:9",
+"highlightStyle": "github",
+"slideNumberFormat": "%current%",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+<style>
+.logo {
+  background-image: url(coffe.svg);
+  background-size: contain;
+  background-repeat: no-repeat;
+  position: absolute;
+  top: 1em;
+  right: 1em;
+  width: 80px;
+  height: 98px;
+  z-index: 0;
+}
+</style>
+
+<script>
+document
+  .querySelectorAll(
+    '.remark-slide-content' +
+    // add additional classes to exclude here, e.g.
+    // ':not(.inverse)' +
+    ':not(.hide-logo)'
+  )
+  .forEach(el => {
+    el.innerHTML += '<div class="logo"></div>';
+  });
+</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
